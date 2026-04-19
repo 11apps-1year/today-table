@@ -3,7 +3,7 @@
 import type { FoodItem, MealEntry, MealMood, MealType } from "@today-table/core";
 import type { User } from "firebase/auth";
 import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
-import { RefreshCw, UtensilsCrossed } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, RefreshCw, UtensilsCrossed } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +44,8 @@ export function MealJournal() {
   const [session, setSession] = useState<Session | null>(null);
   const [mockUsername, setMockUsername] = useState("");
   const [meals, setMeals] = useState<MealEntry[]>([]);
+  const [selectedDateKey, setSelectedDateKey] = useState(() => toDateKey(new Date()));
+  const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const [eatenAt, setEatenAt] = useState(() => new Date().toISOString().slice(0, 16));
   const [mealType, setMealType] = useState<MealType>("breakfast");
   const [foodLines, setFoodLines] = useState("");
@@ -54,6 +56,17 @@ export function MealJournal() {
   const [error, setError] = useState<string | null>(null);
 
   const username = useMemo(() => session?.username ?? "", [session]);
+  const mealsByDate = useMemo(() => groupMealsByDate(meals), [meals]);
+  const selectedMeals = useMemo(() => mealsByDate.get(selectedDateKey) ?? [], [mealsByDate, selectedDateKey]);
+  const calendarDays = useMemo(() => createCalendarDays(visibleMonth), [visibleMonth]);
+  const visibleMonthLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat("ko-KR", {
+        year: "numeric",
+        month: "long"
+      }).format(visibleMonth),
+    [visibleMonth]
+  );
 
   useEffect(() => {
     if (authMode === "mock") {
@@ -91,7 +104,7 @@ export function MealJournal() {
     }
 
     setError(null);
-    const response = await fetch("/api/meals?limit=30", {
+    const response = await fetch("/api/meals?limit=180", {
       headers: await createAuthHeaders(activeSession)
     });
 
@@ -179,6 +192,9 @@ export function MealJournal() {
       setTags("");
       setNote("");
       setMood("balanced");
+      const nextSelectedDate = toDateKey(new Date(eatenAt));
+      setSelectedDateKey(nextSelectedDate);
+      setVisibleMonth(startOfMonth(new Date(eatenAt)));
       await loadMeals(session);
     } catch {
       setError("기록 저장에 실패했습니다.");
@@ -301,8 +317,11 @@ export function MealJournal() {
         <Card className="min-h-[520px]">
           <CardHeader className="flex-row items-center justify-between">
             <div>
-              <CardTitle>최근 기록</CardTitle>
-              <CardDescription>로컬 PoC에서는 SQLite에 저장됩니다.</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-primary" />
+                날짜별 기록
+              </CardTitle>
+              <CardDescription>캘린더에서 날짜를 선택해 식사를 확인합니다.</CardDescription>
             </div>
             <Button type="button" variant="secondary" size="icon" onClick={() => loadMeals()} aria-label="새로고침">
               <RefreshCw className="h-4 w-4" />
@@ -310,32 +329,101 @@ export function MealJournal() {
           </CardHeader>
           <CardContent>
             {session ? (
-              meals.length > 0 ? (
-                <ol className="grid gap-3">
-                  {meals.map((meal) => (
-                    <li className="grid gap-2 rounded-lg border bg-background p-4" key={meal.id}>
-                      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground">
-                        <time dateTime={meal.eatenAt}>{formatDate(meal.eatenAt)}</time>
-                        <span className="rounded-full bg-secondary px-2 py-1 text-secondary-foreground">{mealTypeLabels[meal.mealType]}</span>
-                        <span className="rounded-full bg-primary/10 px-2 py-1 text-primary">{moodLabels[meal.mood]}</span>
-                      </div>
-                      <strong className="text-lg">{meal.items.map((item) => item.name).join(", ")}</strong>
-                      {meal.note ? <p className="text-sm leading-6 text-muted-foreground">{meal.note}</p> : null}
-                      {meal.tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {meal.tags.map((tag) => (
-                            <em className="text-xs font-bold not-italic text-coral" key={tag}>
-                              {tag}
-                            </em>
-                          ))}
-                        </div>
-                      ) : null}
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="leading-7 text-muted-foreground">아직 기록이 없습니다.</p>
-              )
+              <div className="grid gap-6">
+                <div className="grid gap-3 rounded-lg border bg-background p-4">
+                  <div className="flex items-center justify-between">
+                    <Button type="button" variant="ghost" size="icon" onClick={() => setVisibleMonth(addMonths(visibleMonth, -1))} aria-label="이전 달">
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <strong className="text-base">{visibleMonthLabel}</strong>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => setVisibleMonth(addMonths(visibleMonth, 1))} aria-label="다음 달">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-muted-foreground">
+                    {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
+                      <span className="py-2" key={day}>
+                        {day}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1">
+                    {calendarDays.map((day) => {
+                      const dayMeals = mealsByDate.get(day.key) ?? [];
+                      const isSelected = day.key === selectedDateKey;
+
+                      return (
+                        <button
+                          className={[
+                            "grid min-h-16 rounded-md border p-2 text-left text-sm transition-colors",
+                            day.isCurrentMonth ? "bg-card text-foreground" : "bg-muted/50 text-muted-foreground",
+                            isSelected ? "border-primary ring-2 ring-ring" : "border-border hover:bg-accent"
+                          ].join(" ")}
+                          key={day.key}
+                          type="button"
+                          onClick={() => setSelectedDateKey(day.key)}
+                        >
+                          <span className="font-semibold">{day.date.getDate()}</span>
+                          {dayMeals.length > 0 ? (
+                            <span className="mt-auto inline-flex h-5 min-w-5 items-center justify-center self-end rounded-full bg-primary px-1.5 text-xs font-bold text-primary-foreground">
+                              {dayMeals.length}
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-xl font-semibold">{formatDateHeading(selectedDateKey)}</h2>
+                      <p className="text-sm text-muted-foreground">{selectedMeals.length > 0 ? `${selectedMeals.length}개의 식사 기록` : "기록된 식사가 없습니다."}</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const selectedDate = fromDateKey(selectedDateKey);
+                        setEatenAt(toDateTimeLocalValue(selectedDate));
+                      }}
+                    >
+                      이 날짜에 기록
+                    </Button>
+                  </div>
+
+                  {selectedMeals.length > 0 ? (
+                    <ol className="grid gap-3">
+                      {selectedMeals.map((meal) => (
+                        <li className="grid gap-2 rounded-lg border bg-background p-4" key={meal.id}>
+                          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground">
+                            <time dateTime={meal.eatenAt}>{formatDateTime(meal.eatenAt)}</time>
+                            <span className="rounded-full bg-secondary px-2 py-1 text-secondary-foreground">{mealTypeLabels[meal.mealType]}</span>
+                            <span className="rounded-full bg-primary/10 px-2 py-1 text-primary">{moodLabels[meal.mood]}</span>
+                          </div>
+                          <strong className="text-lg">{meal.items.map((item) => item.name).join(", ")}</strong>
+                          {meal.note ? <p className="text-sm leading-6 text-muted-foreground">{meal.note}</p> : null}
+                          {meal.tags.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {meal.tags.map((tag) => (
+                                <em className="text-xs font-bold not-italic text-coral" key={tag}>
+                                  {tag}
+                                </em>
+                              ))}
+                            </div>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="rounded-lg border bg-background p-4 leading-7 text-muted-foreground">선택한 날짜에 저장된 식사 기록이 없습니다.</p>
+                  )}
+                </div>
+              </div>
             ) : (
               <p className="leading-7 text-muted-foreground">
                 {authMode === "mock" ? "username으로 mock 로그인하면 로컬 SQLite에 저장할 수 있습니다." : "Google 계정으로 로그인하면 식사 기록을 저장할 수 있습니다."}
@@ -374,7 +462,75 @@ function parseFoodLines(value: string): FoodItem[] {
     });
 }
 
-function formatDate(value: string): string {
+function groupMealsByDate(meals: MealEntry[]): Map<string, MealEntry[]> {
+  const grouped = new Map<string, MealEntry[]>();
+
+  for (const meal of meals) {
+    const key = toDateKey(new Date(meal.eatenAt));
+    grouped.set(key, [...(grouped.get(key) ?? []), meal]);
+  }
+
+  for (const dayMeals of grouped.values()) {
+    dayMeals.sort((left, right) => right.eatenAt.localeCompare(left.eatenAt));
+  }
+
+  return grouped;
+}
+
+function createCalendarDays(month: Date) {
+  const firstDay = startOfMonth(month);
+  const cursor = new Date(firstDay);
+  cursor.setDate(cursor.getDate() - cursor.getDay());
+
+  return Array.from({ length: 42 }, () => {
+    const date = new Date(cursor);
+    cursor.setDate(cursor.getDate() + 1);
+
+    return {
+      date,
+      key: toDateKey(date),
+      isCurrentMonth: date.getMonth() === firstDay.getMonth()
+    };
+  });
+}
+
+function startOfMonth(value: Date): Date {
+  return new Date(value.getFullYear(), value.getMonth(), 1);
+}
+
+function addMonths(value: Date, months: number): Date {
+  return new Date(value.getFullYear(), value.getMonth() + months, 1);
+}
+
+function toDateKey(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function fromDateKey(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function toDateTimeLocalValue(value: Date): string {
+  const now = new Date();
+  const next = new Date(value);
+  next.setHours(now.getHours(), now.getMinutes(), 0, 0);
+  return `${toDateKey(next)}T${String(next.getHours()).padStart(2, "0")}:${String(next.getMinutes()).padStart(2, "0")}`;
+}
+
+function formatDateHeading(value: string): string {
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short"
+  }).format(fromDateKey(value));
+}
+
+function formatDateTime(value: string): string {
   return new Intl.DateTimeFormat("ko-KR", {
     month: "short",
     day: "numeric",
