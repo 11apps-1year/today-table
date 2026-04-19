@@ -1,0 +1,65 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-coral: var(--coral);
+}
+
+:root {
+  color-scheme: light;
+  --background: #fbfcf7;
+  --foreground: #17201c;
+  --card: rgba(255, 255, 255, 0.9);
+  --card-foreground: #17201c;
+  --primary: #2f6f4e;
+  --primary-foreground: #ffffff;
+  --secondary: #f7f4ea;
+  --secondary-foreground: #806114;
+  --muted: #eef3ec;
+  --muted-foreground: #647067;
+  --accent: #edf6ef;
+  --accent-foreground: #1f563a;
+  --destructive: #b13225;
+  --border: #dfe5df;
+  --input: #dfe5df;
+  --ring: rgba(47, 111, 78, 0.32);
+  --coral: #d86d4f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(216, 109, 79, 0.13), transparent 34rem),
+    linear-gradient(135deg, #fbfcf7 0%, #f1f5ef 45%, #fff7f0 100%);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}

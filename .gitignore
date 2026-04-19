@@ -1,0 +1,9 @@
+node_modules
+.next
+dist
+data
+.turbo
+.env
+.env*.local
+*.tsbuildinfo
+firebase-service-account.json

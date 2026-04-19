@@ -1,0 +1,17 @@
+{
+  "name": "today-table",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "pnpm --filter @today-table/core build && pnpm --filter @today-table/firebase-storage build && pnpm --filter @today-table/sqlite build && pnpm --filter @today-table/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm --filter @today-table/core build && pnpm --filter @today-table/firebase-storage build && pnpm --filter @today-table/sqlite build && pnpm -r typecheck",
+    "clean": "pnpm -r clean"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.2.2",
+    "tailwindcss": "4.2.2",
+    "typescript": "6.0.3"
+  }
+}

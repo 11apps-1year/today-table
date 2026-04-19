@@ -1,0 +1,22 @@
+{
+  "name": "@today-table/firebase-storage",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@today-table/core": "workspace:*",
+    "firebase-admin": "13.8.0"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}
